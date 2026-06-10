@@ -72,28 +72,28 @@ Large language models (LLMs) frequently produce fluent but factually incorrect o
 \textbf{Keywords:} large language models, hallucination, RAG, RLHF, LLM-as-a-Judge, prompt engineering, AI safety.
 
 \section{Introduction}
-Large language models (LLMs) such as GPT-4, Claude, and Llama variants have demonstrated remarkable capabilities across a wide spectrum of natural language understanding and generation tasks. However, these models remain prone to hallucinations---outputs that are syntactically coherent yet factually incorrect, fabricated, or unfaithful to a given source. Hallucinations manifest in several forms, including factual hallucination (invented entities, dates, citations), fabrication (plausible but false chains of reasoning), and instruction unfaithfulness (the model fails to follow the user's request). In domains such as clinical decision support, legal advice, and scientific summarization, such failures can be both costly and dangerous.
+Large language models (LLMs) such as GPT-4, Claude, and Llama variants have demonstrated remarkable capabilities across a wide spectrum of natural language understanding and generation tasks \cite{1,19}. However, these models remain prone to hallucinations---outputs that are syntactically coherent yet factually incorrect, fabricated, or unfaithful to a given source \cite{2,3}. Hallucinations manifest in several forms, including factual hallucination (invented entities, dates, citations), fabrication (plausible but false chains of reasoning), and instruction unfaithfulness (the model fails to follow the user's request). In domains such as clinical decision support, legal advice, and scientific summarization, such failures can be both costly and dangerous.
 
-Mitigating hallucination is now widely recognized as a multi-faceted problem with no silver bullet. The research community has proposed interventions at four distinct layers of the LLM stack:
+Mitigating hallucination is now widely recognized as a multi-faceted problem with no silver bullet \cite{4}. The research community has proposed interventions at four distinct layers of the LLM stack:
 \begin{enumerate}
-    \item \textbf{Post-hoc verification} --- a second LLM inspects and validates the first LLM's response.
-    \item \textbf{Context curation (RAG)} --- grounding generation in retrieved, relevance-filtered documents.
-    \item \textbf{Prompt engineering} --- designing system prompts and using negative prompting to suppress undesirable behaviors.
-    \item \textbf{Model alignment} --- fine-tuning the model itself with human feedback (RLHF) or preference data (DPO).
+    \item \textbf{Post-hoc verification} --- a second LLM inspects and validates the first LLM's response \cite{8,9}.
+    \item \textbf{Context curation (RAG)} --- grounding generation in retrieved, relevance-filtered documents \cite{5,6,7}.
+    \item \textbf{Prompt engineering} --- designing system prompts and using negative prompting to suppress undesirable behaviors \cite{12,13}.
+    \item \textbf{Model alignment} --- fine-tuning the model itself with human feedback (RLHF) or preference data (DPO) \cite{1,15,17}.
 \end{enumerate}
 
 In this paper, we treat these four mechanisms as a \textit{layered security stack} analogous to defense-in-depth in classical information security. Each layer is independently useful, but each also has exploitable failure modes. We argue, and empirically demonstrate, that they are maximally effective when stacked.
 
 \section{Background and Related Work}
-\textbf{Hallucination in LLMs.} Ji et al. provide the canonical taxonomy, distinguishing intrinsic hallucinations (output contradicts the source) from extrinsic hallucinations (output cannot be verified from the source). Huang et al. extend this to LLM settings and identify factuality, fidelity, and reasoning as orthogonal axes of failure. Tonmoy et al. survey mitigation strategies and conclude that the field has moved from single interventions to multi-layer pipelines.
+\textbf{Hallucination in LLMs.} Ji et al. \cite{2} provide the canonical taxonomy, distinguishing intrinsic hallucinations (output contradicts the source) from extrinsic hallucinations (output cannot be verified from the source). Huang et al. \cite{3} extend this to LLM settings and identify factuality, fidelity, and reasoning as orthogonal axes of failure. Tonmoy et al. \cite{4} survey mitigation strategies and conclude that the field has moved from single interventions to multi-layer pipelines.
 
-\textbf{Verification by another LLM.} The LLM-as-a-Judge paradigm, popularized by Zheng et al., uses a strong model (often GPT-4 class) to grade the outputs of a weaker or comparable model. Self-Refine iterates feedback $\rightarrow$ revise loops within a single model; more recent work explores multi-agent debate where two or more models cross-examine each other.
+\textbf{Verification by another LLM.} The LLM-as-a-Judge paradigm, popularized by Zheng et al. \cite{8}, uses a strong model (often GPT-4 class) to grade the outputs of a weaker or comparable model. Self-Refine \cite{9} iterates feedback $\rightarrow$ revise loops within a single model; more recent work explores multi-agent debate \cite{10} where two or more models cross-examine each other.
 
-\textbf{Retrieval-Augmented Generation (RAG).} Lewis et al. introduced RAG, coupling a parametric generator with a non-parametric retriever over an external corpus. Subsequent work improves retrieval quality through dense embeddings, re-ranking, and self-critique. A key insight from production deployments is that retrieved-but-irrelevant documents can poison the context window, a phenomenon we call \textit{context poisoning} and address with metadata-aware filtering.
+\textbf{Retrieval-Augmented Generation (RAG).} Lewis et al. \cite{5} introduced RAG, coupling a parametric generator with a non-parametric retriever over an external corpus. Subsequent work improves retrieval quality through dense embeddings, re-ranking \cite{6}, and self-critique \cite{7}. A key insight from production deployments is that retrieved-but-irrelevant documents can poison the context window, a phenomenon we call \textit{context poisoning} and address with metadata-aware filtering.
 
-\textbf{Prompt engineering and negative prompting.} System prompts, chain-of-thought elicitation, and negative prompts (``do not...'') have been shown to materially shift model behavior. Welleck et al. studied negative constraints in neural text generation. Recent work on constitutional AI encodes a list of forbidden behaviors directly into the system prompt.
+\textbf{Prompt engineering and negative prompting.} System prompts, chain-of-thought elicitation, and negative prompts (``do not...'') have been shown to materially shift model behavior \cite{12}. Welleck et al. \cite{13} studied negative constraints in neural text generation. Recent work on constitutional AI \cite{18} encodes a list of forbidden behaviors directly into the system prompt.
 
-\textbf{RLHF and alignment.} Christiano et al. introduced modern RLHF; Ouyang et al. scaled it to InstructGPT using PPO. Direct Preference Optimization (DPO) removes the explicit reward model. Bai et al. extended alignment with rule-based self-critique.
+\textbf{RLHF and alignment.} Christiano et al. \cite{15} introduced modern RLHF; Ouyang et al. \cite{1} scaled it to InstructGPT using PPO \cite{16}. Direct Preference Optimization (DPO) \cite{17} removes the explicit reward model. Bai et al. \cite{18} extended alignment with rule-based self-critique.
 
 \section{The Layered Defense Framework}
 We model an LLM query as a pipeline $\mathcal{P} = (R, F, G, V)$ where:
@@ -119,7 +119,7 @@ Without verification, a hallucinated $\hat{y}$ is delivered verbatim to the user
 \begin{enumerate}
     \item Extract the atomic claims in $\hat{y}$.
     \item For each claim, judge \texttt{supported}, \texttt{contradicted}, or \texttt{unverifiable} against $\mathcal{C}$ (if available) or its parametric knowledge.
-    \item If any claim is contradicted or unverifiable and load-bearing, return a corrected response; otherwise accept $\hat{y}$.
+    \item If any claim is contradicted or unverifiable and load-bearing, return a corrected response; otherwise accept $\hat{y}$ \cite{8,11}.
 \end{enumerate}
 
 \section{Security Layer 2: Metadata-Filtered RAG}
@@ -136,10 +136,10 @@ Even with good context, the generator can hallucinate when the prompt leaves amb
 \begin{equation}
 \text{Prompt} = \sigma \parallel \text{Context} \parallel \mathcal{N} \parallel q
 \end{equation}
-where $\sigma$ specifies expected behavior and $\mathcal{N}$ contains explicit ``do not'' instructions.
+where $\sigma$ specifies expected behavior and $\mathcal{N}$ contains explicit ``do not'' instructions \cite{14}.
 
 \section{Security Layer 4: RLHF and Model Fine-Tuning}
-The deepest threat is the generator itself: it has memorized false correlations, lacks domain knowledge, and has not been trained to express calibrated uncertainty. We fine-tune the base 7B-parameter model with Supervised Fine-Tuning (SFT) and RLHF using PPO on preference pairs. A hallucination-aware reward $r$ combines a factuality score $r_f$, a citation-presence reward $r_c$, and a length penalty $r_\ell$:
+The deepest threat is the generator itself: it has memorized false correlations, lacks domain knowledge, and has not been trained to express calibrated uncertainty. We fine-tune the base 7B-parameter model with Supervised Fine-Tuning (SFT) and RLHF using PPO \cite{16} or DPO \cite{17} on preference pairs. A hallucination-aware reward $r$ combines a factuality score $r_f$, a citation-presence reward $r_c$, and a length penalty $r_\ell$:
 \begin{equation}
 r(y) = \alpha r_f(y) + \beta r_c(y) - \gamma r_\ell(y)
 \end{equation}
@@ -176,10 +176,9 @@ To assert the validity of this hypothesis, we replicated the pipeline using a su
 \end{tabular}
 \end{table}
 
-A comparison of the original paper's findings and our replication results is provided in Table \ref{tab:replication_comparison_ref}.
+A comparison of the original paper's findings and our replication results is provided in Table \ref{tab:replication_comparison}.
 
 \subsection{Side-by-Side Comparison}
-\label{tab:replication_comparison_ref}
 """ + comparison_table + r"""
 
 \subsection{Key Replication Observations}
@@ -193,7 +192,31 @@ A comparison of the original paper's findings and our replication results is pro
 \section{Discussion and Conclusion}
 We presented a four-layer security framework for reducing hallucinations in LLMs. Each layer---LLM-as-a-Judge verification, metadata-filtered RAG, prompt engineering with negative prompting, and RLHF-based fine-tuning---addresses a distinct failure mode in the generation pipeline. 
 
-On both the original 1,200-question benchmark and our replicated evaluation subset, the full stack reduces hallucination rates substantially while preserving answer helpfulness. We conclude that hallucination mitigation is best understood as a defense-in-depth problem, and that future research should focus on composition---how layers interact---rather than on yet another single-layer trick.
+On both the original 1,200-question benchmark and our replicated evaluation subset, the full stack reduces hallucination rates substantially while preserving answer helpfulness. We conclude that hallucination mitigation is best understood as a defense-in-depth problem, and that future research should focus on composition---how layers interact---rather than on yet another single-layer trick \cite{20,21}.
+
+\begin{thebibliography}{21}
+\bibitem{1} L. Ouyang et al., ``Training language models to follow instructions with human feedback,'' in \textit{Advances in Neural Information Processing Systems (NeurIPS)}, 2022.
+\bibitem{2} Z. Ji et al., ``Survey of hallucination in natural language generation,'' \textit{ACM Computing Surveys}, vol. 55, no. 12, 2023.
+\bibitem{3} L. Huang et al., ``A survey on hallucination in large language models: Principles, taxonomy, challenges, and open questions,'' \textit{arXiv preprint arXiv:2311.05232}, 2023.
+\bibitem{4} S. M. T. I. Tonmoy et al., ``A comprehensive survey of hallucination mitigation techniques in large language models,'' \textit{arXiv preprint arXiv:2401.01313}, 2024.
+\bibitem{5} P. Lewis et al., ``Retrieval-augmented generation for knowledge-intensive NLP tasks,'' in \textit{NeurIPS}, 2020.
+\bibitem{6} Y. Gao et al., ``Retrieval-augmented generation for large language models: A survey,'' \textit{arXiv preprint arXiv:2312.10997}, 2023.
+\bibitem{7} A. Asai et al., ``Self-RAG: Learning to retrieve, generate, and critique through self-reflection,'' in \textit{ICLR}, 2024.
+\bibitem{8} L. Zheng et al., ``Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena,'' in \textit{NeurIPS Datasets and Benchmarks Track}, 2023.
+\bibitem{9} A. Madaan et al., ``Self-Refine: Iterative refinement with self-feedback,'' in \textit{NeurIPS}, 2023.
+\bibitem{10} Y. Du et al., ``Improving factuality and reasoning in language models through multiagent debate,'' \textit{arXiv preprint arXiv:2305.14325}, 2023.
+\bibitem{11} S. Min et al., ``FActScore: Fine-grained atomic evaluation of factual precision in long form text generation,'' in \textit{EMNLP}, 2023.
+\bibitem{12} J. White et al., ``A prompt pattern catalog to enhance prompt engineering with chat GPT,'' \textit{arXiv preprint arXiv:2302.11382}, 2023.
+\bibitem{13} S. Welleck et al., ``Neural text generation with unlikelihood training,'' in \textit{ICLR}, 2020.
+\bibitem{14} O. Khattab et al., ``DSPy: Compiling declarative language model calls into self-improving pipelines,'' \textit{arXiv preprint arXiv:2310.03714}, 2023.
+\bibitem{15} P. Christiano et al., ``Deep reinforcement learning from human preferences,'' in \textit{NeurIPS}, 2017.
+\bibitem{16} J. Schulman et al., ``Proximal policy optimization algorithms,'' \textit{arXiv preprint arXiv:1707.06347}, 2017.
+\bibitem{17} R. Rafailov et al., ``Direct Preference Optimization: Your language model is secretly a reward model,'' in \textit{NeurIPS}, 2023.
+\bibitem{18} Y. Bai et al., ``Constitutional AI: Harmlessness from AI feedback,'' \textit{arXiv preprint arXiv:2212.08073}, 2022.
+\bibitem{19} H. Touvron et al., ``LLaMA: Open and efficient foundation language models,'' \textit{arXiv preprint arXiv:2302.13971}, 2023.
+\bibitem{20} X. L. Li et al., ``Contrastive decoding: Open-ended text generation as optimization,'' \textit{arXiv preprint arXiv:2210.15097}, 2022.
+\bibitem{21} K. Li et al., ``Inference-time intervention: Eliciting truthful answers from a language model,'' \textit{arXiv preprint arXiv:2306.03341}, 2024.
+\end{thebibliography}
 
 \end{document}
 """
