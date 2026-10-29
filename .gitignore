@@ -168,3 +168,7 @@ paper.fls
 submission.zip
 .DS_Store
 pdf-forge-exports/
+
+# bundled package data (the root data/ rule above must not hide it)
+!src/layered_defense/data/
+!src/layered_defense/data/*.csv
