@@ -10,7 +10,7 @@
 \geometry{margin=1in}
 
 \title{\textbf{A Layered Defense Framework for Mitigating Hallucinations in Large Language Models: An Empirical Study of Verification, Retrieval, Prompt Engineering, and Alignment}}
-\author{\textbf{Rajesh Govindarajan} \\ Independent Research \\ Austin, TX, USA \\ \texttt{rj@onboardai.org}}
+\author{\textbf{Rajesh Govindarajan} \\ Independent Researcher \\ \texttt{rj@onboardai.org}}
 \date{June 10, 2026}
 
 \begin{document}
@@ -100,7 +100,7 @@ with $\alpha = 1.0$, $\beta = 0.3$, $\gamma = 0.05$.
 \section{Full-Stack Ablation and Replication Results}
 We turn on each layer cumulatively and measure the end-to-end hallucination rate on the full 1,200-question benchmark. Table \ref{tab:original_ablation} lists the original study's cumulative evaluation findings.
 
-\begin{table}[h]
+\begin{table}[ht]
 \centering
 \caption{Original Study: Cumulative effect of stacking all four security layers.}
 \label{tab:original_ablation}
@@ -115,58 +115,25 @@ We turn on each layer cumulatively and measure the end-to-end hallucination rate
 \end{tabular}
 \end{table}
 
-To assert the validity of this hypothesis, we replicated the pipeline using a subset of the evaluation benchmark across the six domains, using the \texttt{gemini-3.5-flash} model. Table \ref{tab:replicated_results} shows the cumulative ablation metrics observed in our replication experiments.
-
-\begin{table}[h]
-\centering
-\caption{Replication Study: Cumulative effect of stacking all four security layers.}
-\label{tab:replicated_results}
-\begin{tabular}{clcccc}
-\hline
-\textbf{Row} & \textbf{Configuration} & \textbf{HR (\%)} & \textbf{Latency (s)} & \textbf{Cost (\$/1k)} & \textbf{Helpful (1--5)} \\ \hline
-        0 & Base model, no defenses & 50.0\% & 1.09s & \$2.0 & 2.75 \\
-        1 & + L3 prompt engineering & 0.0\% & 1.2s & \$2.1 & 4.58 \\
-        2 & + L2 metadata-filtered RAG & 16.7\% & 1.16s & \$2.1 & 4.25 \\
-        3 & + L4 PPO/RLHF fine-tuning & 0.0\% & 1.64s & \$3.4 & 4.5 \\
-        4 & + L1 LLM-as-a-Judge verifier (full stack) & 0.0\% & 3.95s & \$17.2 & 4.08 \\
-\hline
-\end{tabular}
-\end{table}
-
-A comparison of the original paper's findings and our replication results is provided in Table \ref{tab:replication_comparison}.
-
-\subsection{Side-by-Side Comparison}
-
-\begin{table}[h]
-\centering
-\caption{Replication Comparison: Original vs. Replicated Metrics.}
-\label{tab:replication_comparison}
-\begin{tabular}{c|cc|cc|cc|cc}
-\hline
-\textbf{Row} & \multicolumn{2}{c|}{\textbf{HR (\%)}} & \multicolumn{2}{c|}{\textbf{Latency (s)}} & \multicolumn{2}{c|}{\textbf{Cost (\$/1k)}} & \multicolumn{2}{c}{\textbf{Helpful (1-5)}} \\
- & Orig & Repl & Orig & Repl & Orig & Repl & Orig & Repl \\ \hline
-        0 & 38.4\% & 50.0\% & 1.1s & 1.09s & \$2.0 & \$2.0 & 3.5 & 2.75 \\
-        1 & 27.4\% & 0.0\% & 1.2s & 1.2s & \$2.1 & \$2.1 & 3.7 & 4.58 \\
-        2 & 18.5\% & 16.7\% & 1.6s & 1.16s & \$3.4 & \$2.1 & 4.1 & 4.25 \\
-        3 & 9.3\% & 0.0\% & 1.6s & 1.64s & \$3.4 & \$3.4 & 4.2 & 4.5 \\
-        4 & 6.1\% & 0.0\% & 3.9s & 3.95s & \$17.2 & \$17.2 & 4.3 & 4.08 \\
-\hline
-\end{tabular}
-\end{table}
-
-
-\subsection{Key Replication Observations}
+\subsection{Replication setup}
+To test whether the cumulative trend survives an independent, fully automated re-implementation, we re-ran the ablation with the open-source \texttt{llm-layered-defense} harness\footnote{\url{https://pypi.org/project/llm-layered-defense/}} on a stratified sample of the benchmark (equal numbers of questions per domain, fixed seed). The harness differs from the original protocol in four ways that matter for interpretation:
 \begin{enumerate}
-    \item \textbf{Consistent Trends:} Our replication confirms that stacking the defense layers yields progressive reductions in the hallucination rate.
-    \item \textbf{L3 Effectiveness:} Prompt engineering (L3) significantly stabilizes response structures and suppresses early hallucinatory completions.
-    \item \textbf{Metadata-Filtered RAG:} Incorporating metadata-aware retrieval (L2) prevents poisoned context from degrading generation quality, which otherwise triggers severe hallucination.
-    \item \textbf{Alignment and Verification:} Combining aligned generations (L4) and output verification (L1) reduces the final hallucination rate to the absolute minimum, albeit at a higher latency and cost trade-off.
+    \item \textbf{Judging.} Hallucination and helpfulness are graded by an LLM judge (prompted as in Section~4) rather than by two human annotators.
+    \item \textbf{Layer 4.} No weights are fine-tuned. Unless separate checkpoints are supplied, the ``base'' and ``aligned'' rows use the same hosted model with different system personas and sampling temperatures, so row~3 measures a prompt-level proxy for alignment, not RLHF.
+    \item \textbf{Retrieval.} Retrieval is lexical (token overlap) over a 120-document synthetic store with six injected adversarial documents (5\%). Adversarial documents are assumed to be retrieval-optimised by the attacker; the metadata policy is domain match, five-year recency and trust score $\geq 0.7$.
+    \item \textbf{Cost.} Costs are computed from the provider's reported token counts and list prices; when the provider is a local proxy they include the proxy's own prompt overhead.
 \end{enumerate}
+In addition to the five cumulative rows, the harness runs two Layer-2 controls between rows 1 and 2 (vanilla RAG on a clean index, row~11, and vanilla RAG on the poisoned index, row~12) so that context poisoning is measured rather than assumed. Provider failures are recorded and excluded; the harness never substitutes simulated values. Table~\ref{tab:replicated_results} and Table~\ref{tab:replication_comparison} are generated directly from the results file and are followed by observations derived from the same data.
+
+\input{results_tables}
+
+\subsection{Reading the replication}
+With a few dozen questions per row, the 95\% intervals in Table~\ref{tab:replicated_results} are wide, and a modern instruction-tuned generator answers this synthetic benchmark far more accurately than the 7B base model of the original study, which compresses the headline effect. The replication should therefore be read as a check on the \emph{mechanisms}---whether a poisoned index raises hallucination, whether metadata filtering removes the adversarial context, whether the verifier rewrites unsupported drafts, and what each layer costs in latency and dollars---rather than as a reproduction of the original magnitudes. Where the generated observations report overlapping intervals, no ordering between rows should be inferred.
 
 \section{Discussion and Conclusion}
 We presented a four-layer security framework for reducing hallucinations in LLMs. Each layer---LLM-as-a-Judge verification, metadata-filtered RAG, prompt engineering with negative prompting, and RLHF-based fine-tuning---addresses a distinct failure mode in the generation pipeline. 
 
-On both the original 1,200-question benchmark and our replicated evaluation subset, the full stack reduces hallucination rates substantially while preserving answer helpfulness. We conclude that hallucination mitigation is best understood as a defense-in-depth problem, and that future research should focus on composition---how layers interact---rather than on yet another single-layer trick \cite{20,21}.
+On the original 1,200-question benchmark the full stack reduces the hallucination rate substantially while preserving answer helpfulness; the automated replication in Section~8 confirms the mechanisms each layer relies on and reports, with confidence intervals, how much of the cumulative trend survives on a stronger generator and a small sample. We conclude that hallucination mitigation is best understood as a defense-in-depth problem, and that future research should focus on composition---how layers interact---rather than on yet another single-layer trick \cite{20,21}.
 
 \begin{thebibliography}{21}
 \bibitem{1} L. Ouyang et al., ``Training language models to follow instructions with human feedback,'' in \textit{Advances in Neural Information Processing Systems (NeurIPS)}, 2022.

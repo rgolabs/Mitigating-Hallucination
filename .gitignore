@@ -156,3 +156,15 @@ Thumbs.db
 # Project-specific ignored files
 data/
 results.json
+
+# project
+.venv/
+results*.json
+paper.aux
+paper.log
+paper.out
+paper.fdb_latexmk
+paper.fls
+submission.zip
+.DS_Store
+pdf-forge-exports/
