@@ -39,8 +39,10 @@ dev = ["pytest>=8", "pytest-cov>=5", "ruff>=0.6", "build>=1.2", "twine>=5"]
 layered-defense = "layered_defense.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/rajeshgovindarajan/llm-layered-defense"
-Issues = "https://github.com/rajeshgovindarajan/llm-layered-defense/issues"
+Homepage = "https://github.com/rgolabs/Mitigating-Hallucination"
+Issues = "https://github.com/rgolabs/Mitigating-Hallucination/issues"
+Paper = "https://doi.org/10.5281/zenodo.23768596"
+Changelog = "https://github.com/rgolabs/Mitigating-Hallucination/blob/main/CHANGELOG.md"
 
 [tool.hatch.build]
 artifacts = ["src/layered_defense/data/*.csv"]  # data/ is git-ignored at the repo root

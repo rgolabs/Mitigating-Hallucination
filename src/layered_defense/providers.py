@@ -355,5 +355,5 @@ def make_provider(
         raise ProviderError(
             f"no API key for provider {provider!r}; set {API_KEY_ENV.get(provider, 'LLM_API_KEY')} or pass --api-key"
         )
-    headers = {"HTTP-Referer": "https://github.com/rajeshgovindarajan/llm-layered-defense", "X-Title": "llm-layered-defense"} if provider == "openrouter" else None
+    headers = {"HTTP-Referer": "https://github.com/rgolabs/Mitigating-Hallucination", "X-Title": "llm-layered-defense"} if provider == "openrouter" else None
     return OpenAICompatibleProvider(url, key, model, name=provider, pricing=pricing, timeout=timeout, extra_headers=headers)
